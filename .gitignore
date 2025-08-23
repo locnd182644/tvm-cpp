@@ -43,6 +43,7 @@
 build
 data
 weights
+tmp
 
 *.tar
 *.tar.gz
