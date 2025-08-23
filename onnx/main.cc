@@ -29,16 +29,25 @@ std::vector<float> load_bin(const char* path, size_t expected_elems) {
     return v;
 }
 
-const char* labels[] = {"Foreign material",
-                        "Over etching",
-                        "Residue",
-                        "Resin",
-                        "Size not enough",
-                        "UnProcessed"};
+const char* labels[] = {"plane",
+                        "car",
+                        "bird",
+                        "cat",
+                        "deer",
+                        "dog",
+                        "frog",
+                        "horse",
+                        "ship",
+                        "truck"
+                    };
+
+const int shapes[] = {1, 3, 32, 32};
+
+#define LABELS_COUNT (sizeof(labels) / sizeof(labels[0]))
 
 int main(int argc, char** argv)
 {
-    std::string path = "./MobileNetV2.so";
+    std::string path = "./libtvm_model.so";
 
     // Load the shared object
     Module m = Module::LoadFromFile(path);
@@ -51,7 +60,7 @@ int main(int argc, char** argv)
     // Create a VM from the Executable
     Module mod = vm_load_executable();
     PackedFunc vm_initialization = mod.GetFunction("vm_initialization");
-    CHECK(vm_initialization != nullptr)``
+    CHECK(vm_initialization != nullptr)
         << "Error: `vm_initialization` does not exist in file `" << path << "`";
 
     // Initialize the VM
@@ -65,15 +74,13 @@ int main(int argc, char** argv)
         << "Error: Entry function does not exist in file `" << path << "`";
 
     // Load binary data
-    auto input_img = load_bin(argv[1], 1 * 96 * 96 * 3);
+    auto input_img = load_bin(argv[1], shapes[0] * shapes[1] * shapes[2] * shapes[3]);
 
-    size_t class_num = sizeof(labels) / sizeof(labels[0]);
-
-    std::vector<float> C(class_num, 0.0f);
+    std::vector<float> C(LABELS_COUNT, 0.0f);
 
     // Create and initialize the input array
-    tvm::runtime::NDArray IMG = tvm::runtime::NDArray::Empty({1, 96, 96, 3}, tvm::runtime::DataType::Float(32), device);
-    tvm::runtime::NDArray output_C = tvm::runtime::NDArray::Empty({1, class_num}, tvm::runtime::DataType::Float(32), device);
+    tvm::runtime::NDArray IMG = tvm::runtime::NDArray::Empty({shapes[0], shapes[1], shapes[2], shapes[3]}, tvm::runtime::DataType::Float(32), device);
+    tvm::runtime::NDArray output_C = tvm::runtime::NDArray::Empty({1, LABELS_COUNT}, tvm::runtime::DataType::Float(32), device);
 
     memcpy(IMG->data, input_img.data(), sizeof(float) * input_img.size());
 
@@ -91,7 +98,7 @@ int main(int argc, char** argv)
     memcpy(C.data(), output_C->data, sizeof(float) * C.size());
 
     printf("Output C:\n");
-    for (int i = 0; i < class_num; ++i) 
+    for (int i = 0; i < LABELS_COUNT; ++i) 
     {
         std::cout << C[i] << " ";
     }
